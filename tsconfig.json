@@ -10,6 +10,9 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
+      "ngx-fetcher-with-etag": [
+        "./dist/ngx-fetcher-with-etag"
+      ],
       "ngx-json-schema-forms": [
         "./dist/ngx-json-schema-forms"
       ]
