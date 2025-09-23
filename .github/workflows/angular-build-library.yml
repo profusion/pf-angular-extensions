@@ -1,0 +1,47 @@
+# This reusable workflow builds an Angular library and uploads the dist artifact.
+name: Build AngularLibrary
+
+on:
+  workflow_call:
+    inputs:
+      lib_name:
+        description: 'The name of the library to build (e.g., @my-company/my-lib)'
+        required: true
+        type: string
+      node-version:
+        description: "Node.js version to use for building (e.g., '16', '18', '20', '22')"
+        required: false
+        type: string
+        default: '22'
+
+jobs:
+  build:
+    name: Build Angular Library
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and Cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '${{ inputs.node-version }}'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build library
+        # The library name in angular.json might not have the scope
+        run: |
+          LIB_PROJECT_NAME=$(echo "${{ inputs.lib_name }}" | sed 's|.*/||')
+          echo "Building Angular library: $LIB_PROJECT_NAME"
+          npx ng build $LIB_PROJECT_NAME
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: library-dist
+          path: dist/${{ inputs.lib_name }}
+
