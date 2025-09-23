@@ -3,6 +3,7 @@
 name: Release and Publish Library
 
 on:
+  push:
   workflow_dispatch:
     inputs:
       library_name:
