@@ -1,5 +1,5 @@
 {
-  "name": "ngx-json-schema-forms",
+  "name": "@profusion/ngx-json-schema-forms",
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/common": "^19.2.0",
