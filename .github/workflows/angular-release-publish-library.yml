@@ -1,0 +1,22 @@
+# This workflow orchestrates the entire release process for an Angular library
+# by calling a series of modular, reusable workflows.
+name: Release and Publish Library
+
+on:
+  workflow_dispatch:
+    inputs:
+      library_name:
+        description: 'The project name of the library to release'
+        required: true
+        type: choice
+        options:
+          - ngx-fetcher-with-etag
+          - ngx-json-schema-forms
+
+jobs:
+  release-and-publish:
+    uses: profusion/github-actions/.github/workflows/angular-release-publish-library.yml@main
+    with:
+      library_name: ${{ inputs.library_name }}
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
