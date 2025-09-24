@@ -12,46 +12,12 @@ on:
         options:
           - ngx-fetcher-with-etag
           - ngx-json-schema-forms
-        default: 'ngx-fetcher-with-etag'
+        default: 'ngx-json-schema-forms'
 
 jobs:
-  verify:
-    name: 1. Verify Package
-    uses: ./.github/workflows/angular-verify-package.yml
-    with:
-      library_path: 'projects/${{ inputs.library_name }}'
-      library_name: ${{ inputs.library_name }}
-      org_scope: '@profusion'
-    secrets: inherit
-
-  build:
-    name: 2. Build Library
-    needs: verify
-    uses: ./.github/workflows/angular-build-library.yml
+  release-and-publish:
+    uses: profusion/github-actions/.github/workflows/angular-release-publish-library.yml@main
     with:
       library_name: ${{ inputs.library_name }}
-    secrets: inherit
-
-  tag:
-    name: 3. Create Git Tag
-    needs: [verify, build]
-    uses: ./.github/workflows/git-tag.yml
-    with:
-      version: ${{ needs.verify.outputs.version }}
-      tag_prefix: ${{ github.event.inputs.library_name }}
-    secrets: inherit
-
-  release:
-    name: 4. Create GitHub Release
-    needs: [verify, tag]
-    uses: ./.github/workflows/github-release.yml
-    with:
-      tag: ${{ github.event.inputs.library_name }}-v${{ needs.verify.outputs.version }}
-    secrets: inherit
-
-  publish:
-    name: 5. Publish to npm
-    needs: [release]
-    uses: ./.github/workflows/npm-publish.yml
-    secrets: inherit
-
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
