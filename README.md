@@ -6,3 +6,5 @@ Libraries to aid in Angular development
 
 - [ngx-json-schema-forms](/projects/ngx-json-schema-forms/README.md)
   - Automatically generate ReactiveForms components based on your JSON Schema definitions
+- [ngx-fetcher-with-etag](/projects/ngx-fetcher-with-etag/README.md)
+  - ETag data fetching library for Angular applications
