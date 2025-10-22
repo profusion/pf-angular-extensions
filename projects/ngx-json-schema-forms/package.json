@@ -1,6 +1,18 @@
 {
   "name": "@profusion/ngx-json-schema-forms",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "homepage": "https://github.com/profusion/pf-angular-extensions/tree/main/projects/ngx-json-schema-forms",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/profusion/pf-angular-extensions.git"
+  },
+  "keywords": [
+    "angular",
+    "angular-extensions",
+    "reactive-forms",
+    "forms",
+    "json-schema"
+  ],
   "peerDependencies": {
     "@angular/common": "^19.2.0",
     "@angular/core": "^19.2.0",
