@@ -1,6 +1,6 @@
 {
   "name": "@profusion/ngx-json-schema-forms",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "homepage": "https://github.com/profusion/pf-angular-extensions/tree/main/projects/ngx-json-schema-forms",
   "repository": {
     "type": "git",
