@@ -187,27 +187,25 @@ type AnySchemaToFormType<T extends AnyResolvedSchema, R extends boolean> = 'cons
     ? FormControl<null>
     : T extends AnyScalarSchema
       ? AnyScalarSchemaToFormType<T, R, true>
-      : T extends AnyObjectSchema
-        ? AnyObjectSchemaToFormType<T>
-        : T extends AnyArraySchema
-          ? AnyArraySchemaToFormType<T>
-          : T['type'] extends infer TypeArray
-            ? TypeArray extends readonly AnySchemaType[]
-              ? TypeArray extends readonly [AnySchemaScalarType, 'null']
-                ? AnyScalarSchemaToFormType<Omit<T, 'type'> & { type: TypeArray[0] }, false, false>
-                : never
-              : T['anyOf'] extends infer AnyOf
-                ? AnyOf extends AnyResolvedSchema[]
-                  ? AnyXOfSchemaToFormTypeFiltered<AnyOf>
-                  : T['oneOf'] extends infer OneOf
-                    ? OneOf extends AnyResolvedSchema[]
-                      ? AnyXOfSchemaToFormTypeFiltered<OneOf>
-                      : T['allOf'] extends AnyResolvedSchema[]
-                        ? never
+      : T['anyOf'] extends infer AnyOf
+        ? AnyOf extends readonly AnyResolvedSchema[]
+          ? AnyXOfSchemaToFormTypeFiltered<AnyOf>
+          : T['oneOf'] extends infer OneOf
+            ? OneOf extends readonly AnyResolvedSchema[]
+              ? AnyXOfSchemaToFormTypeFiltered<OneOf>
+              : T extends AnyObjectSchema
+                ? AnyObjectSchemaToFormType<T>
+                : T extends AnyArraySchema
+                  ? AnyArraySchemaToFormType<T>
+                  : T['type'] extends infer TypeValue
+                    ? TypeValue extends readonly AnySchemaType[]
+                      ? TypeValue extends readonly [AnySchemaScalarType, 'null']
+                        ? AnyScalarSchemaToFormType<Omit<T, 'type'> & { type: TypeValue[0] }, false, false>
                         : never
+                      : never
                     : never
-                : never
-            : never;
+            : never
+        : never;
 
 function filterNullSchemas(schemas: readonly AnyResolvedSchema[]): {
   filteredSchemas: AnyResolvedSchema[];
@@ -290,22 +288,6 @@ function anySchemaToForm<T extends AnyResolvedSchema, R extends boolean>(
     ) as AnySchemaToFormType<T, R>;
   }
 
-  if (isObjectSchema(s)) {
-    const formGroup = objSchemaToFormGroup(s, defaultValue as AnyObjectSchemaToTsType<typeof s>);
-    if (applyRequired) {
-      (formGroup as FormGroup).addValidators(Validators.required);
-    }
-    return formGroup;
-  }
-
-  if (isArraySchema(s)) {
-    const formArray = arraySchemaToFormArray(s, applyRequired, defaultValue as AnyArraySchemaToTsType<typeof s>);
-    if (applyRequired) {
-      formArray.addValidators(Validators.required);
-    }
-    return formArray as AnySchemaToFormType<T, R>;
-  }
-
   if (isAnyOfSchema(s)) {
     const { filteredSchemas, hadNullSchema } = filterNullSchemas(s.anyOf);
 
@@ -359,6 +341,22 @@ function anySchemaToForm<T extends AnyResolvedSchema, R extends boolean>(
       true,
       defaultValue as AnyXOfSchemaToTsType<typeof s.allOf>,
     ) as AnySchemaToFormType<T, R>;
+  }
+
+  if (isObjectSchema(s)) {
+    const formGroup = objSchemaToFormGroup(s, defaultValue as AnyObjectSchemaToTsType<typeof s>);
+    if (applyRequired) {
+      (formGroup as FormGroup).addValidators(Validators.required);
+    }
+    return formGroup;
+  }
+
+  if (isArraySchema(s)) {
+    const formArray = arraySchemaToFormArray(s, applyRequired, defaultValue as AnyArraySchemaToTsType<typeof s>);
+    if (applyRequired) {
+      formArray.addValidators(Validators.required);
+    }
+    return formArray as AnySchemaToFormType<T, R>;
   }
 
   console.warn('schemaToForm: Unhandled or complex schema structure, unable to generate Form', s);
