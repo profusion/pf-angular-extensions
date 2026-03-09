@@ -955,4 +955,85 @@ describe('integration: complex schemas via objSchemaToFormGroup', () => {
     expect(first.get('mode')!.value).toBe('fast');
     expect(second.get('level')!.value).toBe(5);
   });
+
+  it('should pass default values through discriminated oneOf with multiple object variants', () => {
+    const schema = {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        strategy: {
+          type: 'object',
+          discriminator: { propertyName: 'type' },
+          required: ['type'] as const,
+          oneOf: [
+            {
+              type: 'object',
+              properties: {
+                type: { type: 'string', const: 'lookup' } as const,
+                key_name: { type: 'string' },
+              },
+              required: ['type', 'key_name'] as const,
+              additionalProperties: false,
+            },
+            {
+              type: 'object',
+              properties: {
+                type: { type: 'string', const: 'static' } as const,
+              },
+              required: ['type'] as const,
+              additionalProperties: false,
+            },
+            {
+              type: 'object',
+              properties: {
+                type: { type: 'string', const: 'computed' } as const,
+                expression: { type: 'string' },
+              },
+              required: ['type', 'expression'] as const,
+              additionalProperties: false,
+            },
+          ],
+        },
+      },
+      required: ['strategy'] as const,
+    } as const;
+
+    const activeVariant: { type: string; key_name?: string; expression?: string } = {
+      type: 'lookup',
+      key_name: 'my_key',
+    };
+
+    const form = objSchemaToFormGroup(schema, {
+      strategy: [
+        {
+          type: 'lookup',
+          key_name: activeVariant.type === 'lookup' ? activeVariant.key_name ?? '' : '',
+        },
+        { type: 'static' },
+        {
+          type: 'computed',
+          expression: activeVariant.type === 'computed' ? activeVariant.expression ?? '' : '',
+        },
+      ],
+    });
+
+    const strategyGroup = form.get('strategy') as FormGroup;
+    expect(strategyGroup).toBeInstanceOf(FormGroup);
+
+    const variant0 = strategyGroup.get('0') as FormGroup;
+    const variant1 = strategyGroup.get('1') as FormGroup;
+    const variant2 = strategyGroup.get('2') as FormGroup;
+
+    expect(variant0).toBeInstanceOf(FormGroup);
+    expect(variant1).toBeInstanceOf(FormGroup);
+    expect(variant2).toBeInstanceOf(FormGroup);
+
+    expect(variant0.get('type')!.value).toBe('lookup');
+    expect(variant0.get('key_name')!.value).toBe('my_key');
+
+    expect(variant1.get('type')!.value).toBe('static');
+
+    expect(variant2.get('type')!.value).toBe('computed');
+    expect(variant2.get('expression')!.value).toBe('');
+  });
 });

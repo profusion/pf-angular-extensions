@@ -73,23 +73,6 @@ type AnyXOfSchemaToTsType<TArr extends readonly unknown[]> = TArr extends readon
       ? (Element extends AnyResolvedSchema ? AnySchemaToTsType<Element> : Element)[]
       : never;
 
-// Union representation — the actual semantic TS type for anyOf/oneOf
-type AnyAnyOfSchemaToTsType<TArr extends readonly AnyResolvedSchema[]> = {
-  [K in keyof TArr]: TArr[K] extends AnyResolvedSchema ? AnySchemaToTsType<TArr[K]> : never;
-}[number];
-
-// Intersection representation — the actual semantic TS type for allOf
-type AnyAllOfSchemaToTsType<TArr extends readonly AnyResolvedSchema[]> = TArr extends readonly [
-  infer First,
-  ...infer Rest,
-]
-  ? First extends AnyResolvedSchema
-    ? Rest extends readonly AnyResolvedSchema[]
-      ? AnySchemaToTsType<First> & AnyAllOfSchemaToTsType<Rest>
-      : AnySchemaToTsType<First>
-    : never
-  : unknown;
-
 // Just to avoid repeating in the `xOf` fallbacks below...
 type AnySchemaToTsTypeFallback<T extends AnyResolvedSchema> = T extends AnyObjectSchema
   ? AnyObjectSchemaToTsType<T>
@@ -110,18 +93,18 @@ type AnySchemaToTsType<T extends AnyResolvedSchema> = T['type'] extends 'null'
         ? AnyScalarSchemaToTsType<T>
         : T['anyOf'] extends infer AnyOf
           ? AnyOf extends readonly AnyResolvedSchema[]
-            ? AnyAnyOfSchemaToTsType<AnyOf>
+            ? AnyXOfSchemaToTsTypeFiltered<AnyOf>
             : T['oneOf'] extends infer OneOf
               ? OneOf extends readonly AnyResolvedSchema[]
-                ? AnyAnyOfSchemaToTsType<OneOf>
+                ? AnyXOfSchemaToTsTypeFiltered<OneOf>
                 : T['allOf'] extends infer AllOf
                   ? AllOf extends readonly AnyResolvedSchema[]
-                    ? AnyAllOfSchemaToTsType<AllOf>
+                    ? AnyXOfSchemaToTsType<AllOf>
                     : AnySchemaToTsTypeFallback<T>
                   : AnySchemaToTsTypeFallback<T>
               : T['allOf'] extends infer AllOf
                 ? AllOf extends readonly AnyResolvedSchema[]
-                  ? AnyAllOfSchemaToTsType<AllOf>
+                  ? AnyXOfSchemaToTsType<AllOf>
                   : AnySchemaToTsTypeFallback<T>
                 : AnySchemaToTsTypeFallback<T>
           : never;
@@ -176,6 +159,24 @@ type HasNullSchema<T extends readonly AnyResolvedSchema[]> = T extends readonly 
       : HasNullSchema<Rest>
     : false
   : false;
+
+// Filters null schemas and unwraps single-element xOf, matching AnyXOfSchemaToFormTypeFiltered
+type AnyXOfSchemaToTsTypeFiltered<T extends readonly AnyResolvedSchema[]> =
+  FilterNullSchemas<T> extends { filteredSchemas: infer Filtered; hadNullSchema: infer HadNull }
+    ? Filtered extends readonly AnyResolvedSchema[]
+      ? HadNull extends boolean
+        ? Filtered extends readonly []
+          ? HadNull extends true
+            ? null
+            : never
+          : Filtered extends readonly [infer Single]
+            ? Single extends AnyResolvedSchema
+              ? AnySchemaToTsType<Single> | (HadNull extends true ? null : never)
+              : never
+            : AnyXOfSchemaToTsType<Filtered> | (HadNull extends true ? null : never)
+        : never
+      : never
+    : never;
 
 type AnyXOfSchemaToFormTypeFiltered<T extends readonly AnyResolvedSchema[]> =
   FilterNullSchemas<T> extends { filteredSchemas: infer Filtered; hadNullSchema: infer HadNull }
