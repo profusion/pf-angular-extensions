@@ -60,6 +60,7 @@ type AnyArraySchemaToTsType<T extends AnyArraySchema> = T['items'] extends infer
     : unknown[]
   : never;
 
+// Tuple representation — used for passing default values into xOf form builders
 type AnyXOfSchemaToTsType<TArr extends readonly unknown[]> = TArr extends readonly [infer First, ...infer Rest]
   ? Rest extends readonly []
     ? First extends AnyResolvedSchema
@@ -72,6 +73,30 @@ type AnyXOfSchemaToTsType<TArr extends readonly unknown[]> = TArr extends readon
       ? (Element extends AnyResolvedSchema ? AnySchemaToTsType<Element> : Element)[]
       : never;
 
+// Union representation — the actual semantic TS type for anyOf/oneOf
+type AnyAnyOfSchemaToTsType<TArr extends readonly AnyResolvedSchema[]> = {
+  [K in keyof TArr]: TArr[K] extends AnyResolvedSchema ? AnySchemaToTsType<TArr[K]> : never;
+}[number];
+
+// Intersection representation — the actual semantic TS type for allOf
+type AnyAllOfSchemaToTsType<TArr extends readonly AnyResolvedSchema[]> = TArr extends readonly [
+  infer First,
+  ...infer Rest,
+]
+  ? First extends AnyResolvedSchema
+    ? Rest extends readonly AnyResolvedSchema[]
+      ? AnySchemaToTsType<First> & AnyAllOfSchemaToTsType<Rest>
+      : AnySchemaToTsType<First>
+    : never
+  : unknown;
+
+// Just to avoid repeating in the `xOf` fallbacks below...
+type AnySchemaToTsTypeFallback<T extends AnyResolvedSchema> = T extends AnyObjectSchema
+  ? AnyObjectSchemaToTsType<T>
+  : T extends AnyArraySchema
+    ? AnyArraySchemaToTsType<T>
+    : never;
+
 type AnySchemaToTsType<T extends AnyResolvedSchema> = T['type'] extends 'null'
   ? null
   : // Example: ['string', 'null']...
@@ -83,23 +108,23 @@ type AnySchemaToTsType<T extends AnyResolvedSchema> = T['type'] extends 'null'
       ? T['const']
       : T extends AnyScalarSchema
         ? AnyScalarSchemaToTsType<T>
-        : T extends AnyObjectSchema
-          ? AnyObjectSchemaToTsType<T>
-          : T extends AnyArraySchema
-            ? AnyArraySchemaToTsType<T>
-            : T['anyOf'] extends infer AnyOf
-              ? AnyOf extends readonly AnyResolvedSchema[]
-                ? AnyXOfSchemaToTsType<AnyOf>
-                : never
-              : T['oneOf'] extends infer OneOf
-                ? OneOf extends readonly AnyResolvedSchema[]
-                  ? AnyXOfSchemaToTsType<OneOf>
-                  : never
+        : T['anyOf'] extends infer AnyOf
+          ? AnyOf extends readonly AnyResolvedSchema[]
+            ? AnyAnyOfSchemaToTsType<AnyOf>
+            : T['oneOf'] extends infer OneOf
+              ? OneOf extends readonly AnyResolvedSchema[]
+                ? AnyAnyOfSchemaToTsType<OneOf>
                 : T['allOf'] extends infer AllOf
                   ? AllOf extends readonly AnyResolvedSchema[]
-                    ? AnyXOfSchemaToTsType<AllOf>
-                    : never
-                  : never;
+                    ? AnyAllOfSchemaToTsType<AllOf>
+                    : AnySchemaToTsTypeFallback<T>
+                  : AnySchemaToTsTypeFallback<T>
+              : T['allOf'] extends infer AllOf
+                ? AllOf extends readonly AnyResolvedSchema[]
+                  ? AnyAllOfSchemaToTsType<AllOf>
+                  : AnySchemaToTsTypeFallback<T>
+                : AnySchemaToTsTypeFallback<T>
+          : never;
 
 type AnyObjectSchemaToFormType<T extends AnyObjectSchema> = T['properties'] extends infer Properties
   ? Properties extends Record<string, AnyResolvedSchema>

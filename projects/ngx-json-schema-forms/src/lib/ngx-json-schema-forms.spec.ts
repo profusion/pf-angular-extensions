@@ -837,5 +837,122 @@ describe('integration: complex schemas via objSchemaToFormGroup', () => {
     const configControl = form.get('config');
     expect(configControl).toBeInstanceOf(FormGroup);
   });
-});
 
+  it('should pass default values through anyOf with nullable schema', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        name: {
+          anyOf: [
+            { type: 'string' },
+            { type: 'null' },
+          ],
+        },
+      },
+    } as const;
+
+    const form = objSchemaToFormGroup(schema, { name: 'hello' });
+    expect(form.get('name')).toBeInstanceOf(FormControl);
+    expect(form.get('name')!.value).toBe('hello');
+  });
+
+  it('should pass default values through oneOf with nullable schema', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        count: {
+          oneOf: [
+            { type: 'number' },
+            { type: 'null' },
+          ],
+        },
+      },
+    } as const;
+
+    const form = objSchemaToFormGroup(schema, { count: 42 });
+    expect(form.get('count')).toBeInstanceOf(FormControl);
+    expect(form.get('count')!.value).toBe(42);
+  });
+
+  it('should pass default values through anyOf with multiple non-null schemas', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        value: {
+          anyOf: [
+            { type: 'object', properties: { a: { type: 'string' } } },
+            { type: 'object', properties: { b: { type: 'number' } } },
+          ],
+        },
+      },
+    } as const;
+
+    const form = objSchemaToFormGroup(schema, {
+      value: [{ a: 'hello' }, { b: 7 }] as any,
+    });
+    const valueGroup = form.get('value') as FormGroup;
+    expect(valueGroup).toBeInstanceOf(FormGroup);
+    const first = valueGroup.get('0') as FormGroup;
+    const second = valueGroup.get('1') as FormGroup;
+    expect(first).toBeInstanceOf(FormGroup);
+    expect(second).toBeInstanceOf(FormGroup);
+    expect(first.get('a')!.value).toBe('hello');
+    expect(second.get('b')!.value).toBe(7);
+  });
+
+  it('should pass default values through allOf schemas', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        combined: {
+          allOf: [
+            { type: 'object', properties: { x: { type: 'string' } } },
+            { type: 'object', properties: { y: { type: 'number' } } },
+          ],
+        },
+      },
+    } as const;
+
+    const form = objSchemaToFormGroup(schema, {
+      combined: [{ x: 'test' }, { y: 99 }] as any,
+    });
+    const combinedGroup = form.get('combined') as unknown as FormGroup;
+    expect(combinedGroup).toBeInstanceOf(FormGroup);
+    const first = combinedGroup.get('0') as FormGroup;
+    const second = combinedGroup.get('1') as FormGroup;
+    expect(first.get('x')!.value).toBe('test');
+    expect(second.get('y')!.value).toBe(99);
+  });
+
+  it('should pass default values through anyOf prioritized over object type', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        config: {
+          type: 'object',
+          anyOf: [
+            { type: 'object', properties: { mode: { type: 'string' } } },
+            { type: 'object', properties: { level: { type: 'number' } } },
+          ],
+          properties: {
+            shared: { type: 'string' },
+          },
+        },
+      },
+    } as const;
+
+    // anyOf should take priority over the object type, so defaults are
+    // passed as an xOf tuple, not as object properties
+    const form = objSchemaToFormGroup(schema, {
+      config: [{ mode: 'fast' }, { level: 5 }] as any,
+    });
+    const configGroup = form.get('config') as FormGroup;
+    expect(configGroup).toBeInstanceOf(FormGroup);
+    const first = configGroup.get('0') as FormGroup;
+    const second = configGroup.get('1') as FormGroup;
+    expect(first).toBeInstanceOf(FormGroup);
+    expect(second).toBeInstanceOf(FormGroup);
+    expect(first.get('mode')!.value).toBe('fast');
+    expect(second.get('level')!.value).toBe(5);
+  });
+});
